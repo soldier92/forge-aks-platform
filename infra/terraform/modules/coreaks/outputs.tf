@@ -10,6 +10,10 @@ output "acr_name" {
   value = azurerm_container_registry.coreaks.name
 }
 
+output "acr_id" {
+  value = azurerm_container_registry.coreaks.id
+}
+
 output "acr_login_server" {
   value = azurerm_container_registry.coreaks.login_server
 }

@@ -50,27 +50,40 @@ resource "azurerm_linux_web_app" "managementportal" {
 
   site_config {
     always_on         = true
-    app_command_line  = var.startup_command
+    app_command_line  = var.startup_command != "" ? var.startup_command : null
     ftps_state        = "Disabled"
     minimum_tls_version = "1.2"
-
-    application_stack {
-      python_version = var.python_version
-    }
   }
 
   app_settings = merge(
     {
-      SCM_DO_BUILD_DURING_DEPLOYMENT = "true"
       WEBSITES_PORT                  = "8000"
+      WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
       DRY_RUN                        = var.dry_run
       DEFAULT_IMAGE                  = var.default_image
     },
     var.app_settings
   )
+
+  lifecycle {
+    ignore_changes = [
+      site_config,
+      app_settings["DOCKER_CUSTOM_IMAGE_NAME"],
+      app_settings["DOCKER_REGISTRY_SERVER_URL"],
+      app_settings["DOCKER_REGISTRY_SERVER_USERNAME"],
+      app_settings["DOCKER_REGISTRY_SERVER_PASSWORD"],
+      app_settings["WEBSITES_ENABLE_APP_SERVICE_STORAGE"],
+    ]
+  }
 }
 
 resource "azurerm_app_service_virtual_network_swift_connection" "managementportal" {
   app_service_id = azurerm_linux_web_app.managementportal.id
   subnet_id      = azurerm_subnet.managementportal.id
+}
+
+resource "azurerm_role_assignment" "managementportal_acr_pull" {
+  scope                = var.container_registry_id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_linux_web_app.managementportal.identity[0].principal_id
 }

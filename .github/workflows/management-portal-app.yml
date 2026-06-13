@@ -41,28 +41,7 @@ jobs:
           terraform version
           terragrunt --version
           az version
-          Get-Command Compress-Archive
 
       - name: Ensure management portal infra
         working-directory: infra/terraform/live/${{ env.ENVIRONMENT }}/managementportal
         run: terragrunt apply --terragrunt-non-interactive --auto-approve
-
-      - name: Deploy management portal package
-        run: |
-          $infraDir = Join-Path $PWD "infra/terraform/live/$env:ENVIRONMENT/managementportal"
-          $portalDir = Join-Path $PWD "portal"
-          $packagePath = Join-Path $env:RUNNER_TEMP "forge-managementportal.zip"
-
-          Push-Location $infraDir
-          $webAppName = (terragrunt output -raw web_app_name).Trim()
-          $resourceGroup = (terragrunt output -raw resource_group_name).Trim()
-          Pop-Location
-
-          if (Test-Path $packagePath) {
-            Remove-Item -LiteralPath $packagePath -Force
-          }
-
-          Compress-Archive -Path (Join-Path $portalDir "*") -DestinationPath $packagePath -Force
-
-          az webapp deploy --resource-group $resourceGroup --name $webAppName --src-path $packagePath --type zip
-          Write-Host "Management portal package deployed to $webAppName."

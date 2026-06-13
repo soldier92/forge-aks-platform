@@ -58,6 +58,6 @@ jobs:
         run: |
           if ($env:ACTION -in @("apply", "destroy")) {
             terragrunt $env:ACTION --terragrunt-non-interactive --auto-approve
-          else
+          } else {
             terragrunt $env:ACTION --terragrunt-non-interactive
           }

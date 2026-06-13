@@ -26,7 +26,7 @@ variable "python_version" {
 
 variable "startup_command" {
   type    = string
-  default = "./startup.sh"
+  default = ""
 }
 
 variable "existing_vnet_resource_group_name" {
@@ -46,6 +46,10 @@ variable "managementportal_subnet_address_prefixes" {
 }
 
 variable "default_image" {
+  type = string
+}
+
+variable "container_registry_id" {
   type = string
 }
 

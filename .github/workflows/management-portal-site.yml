@@ -1,0 +1,101 @@
+name: management-portal-site
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+      image_tag:
+        description: Image tag for the management portal container
+        required: true
+        default: latest
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: powershell
+    env:
+      ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      TFSTATE_RESOURCE_GROUP: ${{ vars.TFSTATE_RESOURCE_GROUP }}
+      TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+      TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER }}
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+      IMAGE_TAG: ${{ github.event.inputs.image_tag || 'latest' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        run: |
+          az login --service-principal --username "$env:ARM_CLIENT_ID" --password "$env:ARM_CLIENT_SECRET" --tenant "$env:ARM_TENANT_ID"
+          az account set --subscription "$env:ARM_SUBSCRIPTION_ID"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Verify runner tools
+        run: |
+          terraform version
+          terragrunt --version
+          az version
+          docker version
+
+      - name: Resolve infra outputs
+        run: |
+          $coreAksDir = Join-Path $PWD "infra/terraform/live/$env:ENVIRONMENT/coreaks"
+          $portalDir = Join-Path $PWD "infra/terraform/live/$env:ENVIRONMENT/managementportal"
+
+          Push-Location $coreAksDir
+          $acrName = (terragrunt output -raw acr_name).Trim()
+          $acrLoginServer = (terragrunt output -raw acr_login_server).Trim()
+          Pop-Location
+
+          Push-Location $portalDir
+          $webAppName = (terragrunt output -raw web_app_name).Trim()
+          $resourceGroup = (terragrunt output -raw resource_group_name).Trim()
+          $hostName = (terragrunt output -raw default_hostname).Trim()
+          Pop-Location
+
+          "ACR_NAME=$acrName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "ACR_LOGIN_SERVER=$acrLoginServer" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "WEB_APP_NAME=$webAppName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "RESOURCE_GROUP=$resourceGroup" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "WEB_APP_HOSTNAME=$hostName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "PORTAL_IMAGE=$acrLoginServer/managementportal:$env:IMAGE_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build and push management portal image
+        run: |
+          az acr login --name "$env:ACR_NAME"
+          docker build -t "$env:PORTAL_IMAGE" "$PWD/portal"
+          docker push "$env:PORTAL_IMAGE"
+
+      - name: Configure web app to use the container image
+        run: |
+          az webapp config container set `
+            --resource-group "$env:RESOURCE_GROUP" `
+            --name "$env:WEB_APP_NAME" `
+            --container-image-name "$env:PORTAL_IMAGE" `
+            --container-registry-url "https://$env:ACR_LOGIN_SERVER"
+
+          az webapp config set `
+            --resource-group "$env:RESOURCE_GROUP" `
+            --name "$env:WEB_APP_NAME" `
+            --generic-configurations '{"acrUseManagedIdentityCreds": true}'
+
+      - name: Restart web app
+        run: az webapp restart --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME"
+
+      - name: Health check
+        run: |
+          Start-Sleep -Seconds 20
+          $url = "https://$env:WEB_APP_HOSTNAME/"
+          Write-Host "Checking $url"
+          Invoke-WebRequest -Uri $url -UseBasicParsing | Select-Object StatusCode

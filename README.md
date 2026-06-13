@@ -27,7 +27,7 @@ The goal is to demonstrate a lightweight enterprise-style platform engineering w
 - Terraform-created management portal subnet inside the existing shared VNet
 - Terraform-created AKS subnet inside the existing shared VNet
 - Linux App Service plan
-- Linux Web App for the management portal
+- Linux Web App for the management portal, configured to run a container image
 
 ## AKS Resources
 
@@ -136,7 +136,6 @@ Runner prerequisites:
 - Terraform
 - Terragrunt
 - Docker
-- zip
 
 ## Azure Deployment Instructions
 
@@ -144,7 +143,6 @@ Runner prerequisites:
 cd infra
 ./create-azure.sh
 ./build-push-default-app.sh
-./deploy-managementportal.sh
 ```
 
 By default these scripts target the `dev` Terragrunt environment. You can override the target with `ENVIRONMENT=<name>`.
@@ -156,14 +154,14 @@ cd infra
 ENVIRONMENT=dev COMPONENT=coreaks ACTION=plan ./create-azure.sh
 ENVIRONMENT=dev COMPONENT=coreaks ACTION=apply ./create-azure.sh
 ENVIRONMENT=dev ./build-push-default-app.sh
-ENVIRONMENT=dev ./deploy-managementportal.sh
 TEAM_NAME=team4 REQUESTED_ENVIRONMENT=dev REQUESTED_CPU=500m REQUESTED_MEMORY=512Mi REQUESTED_IMAGE=myacr.azurecr.io/default-app:latest APP_VERSION=v1 ACTION=apply ./apply-requested-environment.sh
 ```
 
 The GitHub Actions workflows under `.github/workflows/` are designed for a self-hosted runner and are intentionally split by responsibility:
 
 - `core-aks-infra.yml` for only shared `coreaks` Azure infrastructure
-- `management-portal-app.yml` for only `managementportal` infra and app deployment
+- `management-portal-app.yml` for only `managementportal` infrastructure
+- `management-portal-site.yml` for building and deploying the management portal container image
 - `requestedenvironment-infra.yml` for only approved team environments inside AKS
 
 The `requestedenvironment` path is intentionally AKS-only for now. It does not create extra Azure network resources per team request. Each team/environment deployment gets its own Terraform state key so you can rerun one team safely to recreate manually deleted namespace-scoped resources.

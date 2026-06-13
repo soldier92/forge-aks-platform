@@ -25,9 +25,10 @@ The infrastructure deployment approach uses Terraform modules plus Terragrunt en
 ## Pipeline Model
 
 - `core-aks-infra.yml` manages only the shared `coreaks` Azure foundation.
-- `management-portal-app.yml` manages only the `managementportal` App Service infra plus portal package deployment.
+- `management-portal-app.yml` manages only the `managementportal` App Service infrastructure.
+- `management-portal-site.yml` builds the portal Docker image, pushes it to ACR, configures the App Service container, and restarts the site.
 - `requestedenvironment-infra.yml` manages only namespace-scoped AKS resources for an approved team request.
-- All workflows are designed for a GitHub self-hosted runner with Azure CLI, Terraform, Terragrunt, Docker, kubectl, and zip installed.
+- All workflows are designed for a GitHub self-hosted runner with Azure CLI, Terraform, Terragrunt, Docker, and kubectl installed.
 
 ## Requested Environment Scope
 

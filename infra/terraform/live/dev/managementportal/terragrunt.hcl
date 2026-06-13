@@ -11,6 +11,7 @@ dependency "coreaks" {
 
   mock_outputs = {
     default_image = "forgeaksdevacr01.azurecr.io/default-app:latest"
+    acr_id        = "/subscriptions/mock/resourceGroups/mock/providers/Microsoft.ContainerRegistry/registries/mock"
   }
 }
 
@@ -29,5 +30,6 @@ inputs = {
   managementportal_subnet_name     = local.env.locals.network.managementportal_subnet_name
   managementportal_subnet_address_prefixes = local.env.locals.network.managementportal_subnet_cidrs
   default_image                    = dependency.coreaks.outputs.default_image
+  container_registry_id            = dependency.coreaks.outputs.acr_id
   dry_run                          = "false"
 }
