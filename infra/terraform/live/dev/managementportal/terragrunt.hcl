@@ -27,6 +27,7 @@ inputs = {
   existing_vnet_resource_group_name = local.env.locals.network.resource_group_name
   existing_vnet_name               = local.env.locals.network.vnet_name
   managementportal_subnet_name     = local.env.locals.network.managementportal_subnet_name
+  managementportal_subnet_address_prefixes = local.env.locals.network.managementportal_subnet_cidrs
   default_image                    = dependency.coreaks.outputs.default_image
   dry_run                          = "false"
 }

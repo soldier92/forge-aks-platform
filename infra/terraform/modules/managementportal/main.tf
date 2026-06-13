@@ -1,7 +1,24 @@
-data "azurerm_subnet" "managementportal" {
-  name                 = var.managementportal_subnet_name
+data "azurerm_virtual_network" "shared" {
   virtual_network_name = var.existing_vnet_name
   resource_group_name  = var.existing_vnet_resource_group_name
+}
+
+resource "azurerm_subnet" "managementportal" {
+  name                 = var.managementportal_subnet_name
+  resource_group_name  = var.existing_vnet_resource_group_name
+  virtual_network_name = data.azurerm_virtual_network.shared.name
+  address_prefixes     = var.managementportal_subnet_address_prefixes
+
+  delegation {
+    name = "appservice-delegation"
+
+    service_delegation {
+      name = "Microsoft.Web/serverFarms"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/action",
+      ]
+    }
+  }
 }
 
 resource "azurerm_resource_group" "managementportal" {
@@ -55,5 +72,5 @@ resource "azurerm_linux_web_app" "managementportal" {
 
 resource "azurerm_app_service_virtual_network_swift_connection" "managementportal" {
   app_service_id = azurerm_linux_web_app.managementportal.id
-  subnet_id      = data.azurerm_subnet.managementportal.id
+  subnet_id      = azurerm_subnet.managementportal.id
 }

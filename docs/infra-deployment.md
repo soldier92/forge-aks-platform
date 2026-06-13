@@ -19,8 +19,8 @@ The infrastructure deployment approach uses Terraform modules plus Terragrunt en
 - Remote state container: `default`
 - Existing VNet resource group: `rg-01`
 - Existing VNet: `vnet01`
-- Management portal subnet: `subnet-2-portal` (`172.16.0.64/27`)
-- AKS subnet: `subnet-3-aks` (`172.16.0.192/26`)
+- Management portal subnet to be created by Terraform: `subnet-2-portal` (`172.16.0.64/27`)
+- AKS subnet to be created by Terraform: `subnet-3-aks` (`172.16.0.192/26`)
 
 ## Pipeline Model
 

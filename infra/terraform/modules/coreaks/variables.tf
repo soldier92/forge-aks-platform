@@ -30,6 +30,10 @@ variable "aks_subnet_name" {
   type = string
 }
 
+variable "aks_subnet_address_prefixes" {
+  type = list(string)
+}
+
 variable "node_count" {
   type    = number
   default = 1

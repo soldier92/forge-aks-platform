@@ -41,6 +41,10 @@ variable "managementportal_subnet_name" {
   type = string
 }
 
+variable "managementportal_subnet_address_prefixes" {
+  type = list(string)
+}
+
 variable "default_image" {
   type = string
 }

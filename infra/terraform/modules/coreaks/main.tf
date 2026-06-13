@@ -1,7 +1,13 @@
-data "azurerm_subnet" "aks" {
-  name                 = var.aks_subnet_name
+data "azurerm_virtual_network" "shared" {
   virtual_network_name = var.existing_vnet_name
   resource_group_name  = var.existing_vnet_resource_group_name
+}
+
+resource "azurerm_subnet" "coreaks" {
+  name                 = var.aks_subnet_name
+  resource_group_name  = var.existing_vnet_resource_group_name
+  virtual_network_name = data.azurerm_virtual_network.shared.name
+  address_prefixes     = var.aks_subnet_address_prefixes
 }
 
 resource "azurerm_resource_group" "coreaks" {
@@ -32,7 +38,7 @@ resource "azurerm_kubernetes_cluster" "coreaks" {
     name           = "system"
     node_count     = var.node_count
     vm_size        = var.vm_size
-    vnet_subnet_id = data.azurerm_subnet.aks.id
+    vnet_subnet_id = azurerm_subnet.coreaks.id
     type           = "VirtualMachineScaleSets"
   }
 

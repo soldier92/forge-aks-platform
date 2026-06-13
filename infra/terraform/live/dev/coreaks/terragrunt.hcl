@@ -20,4 +20,5 @@ inputs = {
   existing_vnet_resource_group_name = local.env.locals.network.resource_group_name
   existing_vnet_name               = local.env.locals.network.vnet_name
   aks_subnet_name                  = local.env.locals.network.coreaks_subnet_name
+  aks_subnet_address_prefixes      = local.env.locals.network.coreaks_subnet_cidrs
 }

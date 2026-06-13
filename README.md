@@ -24,8 +24,8 @@ The goal is to demonstrate a lightweight enterprise-style platform engineering w
 - Resource group
 - Azure Kubernetes Service cluster
 - Azure Container Registry
-- Existing virtual network integration for the management portal subnet
-- Existing virtual network integration for the AKS subnet
+- Terraform-created management portal subnet inside the existing shared VNet
+- Terraform-created AKS subnet inside the existing shared VNet
 - Linux App Service plan
 - Linux Web App for the management portal
 
@@ -111,8 +111,8 @@ Current implementation details:
 
 - Existing VNet resource group: `rg-01`
 - Existing VNet: `vnet01`
-- Management portal subnet: `subnet-2-portal`
-- AKS subnet: `subnet-3-aks`
+- Management portal subnet created by Terraform: `subnet-2-portal` (`172.16.0.64/27`)
+- AKS subnet created by Terraform: `subnet-3-aks` (`172.16.0.192/26`)
 - Remote state storage account: `defaultstac0231`
 - Remote state container: `default`
 - Deployment service principal client id: `3ebdf63b-b0bf-4c9e-b120-7d565a94239a`

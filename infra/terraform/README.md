@@ -22,10 +22,10 @@ The storage account resource group is read from `TFSTATE_RESOURCE_GROUP` and def
 
 ## Existing Network Dependencies
 
-The solution intentionally reuses existing networking:
+The solution intentionally reuses the existing resource group and virtual network, but creates the required subnets through Terraform:
 
-- Management portal subnet: `rg-01` / `vnet01` / `subnet-2-portal`
-- Core AKS subnet: `rg-01` / `vnet01` / `subnet-3-aks`
+- Management portal subnet: `rg-01` / `vnet01` / `subnet-2-portal` / `172.16.0.64/27`
+- Core AKS subnet: `rg-01` / `vnet01` / `subnet-3-aks` / `172.16.0.192/26`
 
 ## Tooling
 
