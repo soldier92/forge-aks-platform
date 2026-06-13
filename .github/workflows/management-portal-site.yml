@@ -85,10 +85,11 @@ jobs:
             --container-image-name "$env:PORTAL_IMAGE" `
             --container-registry-url "https://$env:ACR_LOGIN_SERVER"
 
+          $genericConfig = @{ acrUseManagedIdentityCreds = $true } | ConvertTo-Json -Compress
           az webapp config set `
             --resource-group "$env:RESOURCE_GROUP" `
             --name "$env:WEB_APP_NAME" `
-            --generic-configurations '{"acrUseManagedIdentityCreds": true}'
+            --generic-configurations $genericConfig
 
       - name: Restart web app
         run: az webapp restart --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME"
