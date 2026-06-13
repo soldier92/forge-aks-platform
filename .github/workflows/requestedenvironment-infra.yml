@@ -40,7 +40,7 @@ jobs:
     runs-on: self-hosted
     defaults:
       run:
-        shell: bash
+        shell: pwsh
     env:
       ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
@@ -56,16 +56,14 @@ jobs:
       REQUESTED_IMAGE: ${{ github.event.inputs.requested_image }}
       APP_VERSION: ${{ github.event.inputs.app_version }}
       ACTION: ${{ github.event.inputs.action || 'apply' }}
+      COREAKS_ENVIRONMENT: dev
     steps:
       - uses: actions/checkout@v4
 
       - name: Azure login
         run: |
-          az login --service-principal \
-            --username "${ARM_CLIENT_ID}" \
-            --password "${ARM_CLIENT_SECRET}" \
-            --tenant "${ARM_TENANT_ID}"
-          az account set --subscription "${ARM_SUBSCRIPTION_ID}"
+          az login --service-principal --username "$env:ARM_CLIENT_ID" --password "$env:ARM_CLIENT_SECRET" --tenant "$env:ARM_TENANT_ID"
+          az account set --subscription "$env:ARM_SUBSCRIPTION_ID"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -80,7 +78,23 @@ jobs:
           kubectl version --client
 
       - name: Get coreaks kubeconfig
-        run: ./infra/get-kubeconfig.sh
+        run: |
+          $coreAksDir = Join-Path $PWD "infra/terraform/live/$env:COREAKS_ENVIRONMENT/coreaks"
+          Push-Location $coreAksDir
+          $aksName = (terragrunt output -raw aks_name).Trim()
+          $resourceGroup = (terragrunt output -raw resource_group_name).Trim()
+          Pop-Location
+
+          az aks get-credentials --resource-group $resourceGroup --name $aksName --overwrite-existing
+          kubectl get nodes
 
       - name: Apply requested environment
-        run: ./infra/apply-requested-environment.sh
+        run: |
+          $runnerDir = Join-Path $PWD "infra/terraform/live/team-runner"
+          Push-Location $runnerDir
+          if ($env:ACTION -in @("apply", "destroy")) {
+            terragrunt $env:ACTION --terragrunt-non-interactive --auto-approve
+          } else {
+            terragrunt $env:ACTION --terragrunt-non-interactive
+          }
+          Pop-Location

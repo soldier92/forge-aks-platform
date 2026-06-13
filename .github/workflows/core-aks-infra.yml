@@ -22,7 +22,7 @@ jobs:
     runs-on: self-hosted
     defaults:
       run:
-        shell: bash
+        shell: pwsh
     env:
       ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
@@ -39,11 +39,8 @@ jobs:
 
       - name: Azure login
         run: |
-          az login --service-principal \
-            --username "${ARM_CLIENT_ID}" \
-            --password "${ARM_CLIENT_SECRET}" \
-            --tenant "${ARM_TENANT_ID}"
-          az account set --subscription "${ARM_SUBSCRIPTION_ID}"
+          az login --service-principal --username "$env:ARM_CLIENT_ID" --password "$env:ARM_CLIENT_SECRET" --tenant "$env:ARM_TENANT_ID"
+          az account set --subscription "$env:ARM_SUBSCRIPTION_ID"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -59,8 +56,8 @@ jobs:
       - name: Run coreaks Terragrunt
         working-directory: infra/terraform/live/${{ env.ENVIRONMENT }}/coreaks
         run: |
-          if [ "${ACTION}" = "apply" ] || [ "${ACTION}" = "destroy" ]; then
-            terragrunt "${ACTION}" --terragrunt-non-interactive --auto-approve
+          if ($env:ACTION -in @("apply", "destroy")) {
+            terragrunt $env:ACTION --terragrunt-non-interactive --auto-approve
           else
-            terragrunt "${ACTION}" --terragrunt-non-interactive
-          fi
+            terragrunt $env:ACTION --terragrunt-non-interactive
+          }
