@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+portal/controlplane.db
+.terraform/
+.terragrunt-cache/
+*.tfstate
+*.tfstate.*
+.DS_Store

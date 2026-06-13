@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Review Result</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem auto; max-width: 900px; }
+    pre { white-space: pre-wrap; background: #f6f8fa; padding: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Request {{ item.id }} Updated</h1>
+  <p><strong>Status:</strong> {{ item.status.value }}</p>
+  <p><strong>Admin Comment:</strong> {{ item.admin_comment or "No comment provided." }}</p>
+  <h2>Deployment Log</h2>
+  <pre>{{ item.deployment_log or "No deployment action was executed." }}</pre>
+  {% if item.error_message %}
+  <h2>Error</h2>
+  <pre>{{ item.error_message }}</pre>
+  {% endif %}
+  <p><a href="/admin?role={{ role }}">Back to admin queue</a></p>
+</body>
+</html>

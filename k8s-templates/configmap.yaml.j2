@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ app_name }}-config
+  namespace: {{ namespace }}
+data:
+  TEAM_NAME: "{{ team_name }}"
+  ENVIRONMENT: "{{ environment }}"
+  APP_VERSION: "{{ app_version }}"

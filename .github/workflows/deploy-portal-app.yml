@@ -1,0 +1,53 @@
+name: deploy-portal-app
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+  push:
+    branches:
+      - main
+    paths:
+      - "portal/**"
+      - ".github/workflows/deploy-portal-app.yml"
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash
+    env:
+      ARM_CLIENT_ID: 3ebdf63b-b0bf-4c9e-b120-7d565a94239a
+      ARM_SUBSCRIPTION_ID: 39023a16-af6f-4b68-8498-e36556540d33
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      TFSTATE_RESOURCE_GROUP: ${{ vars.TFSTATE_RESOURCE_GROUP }}
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        run: |
+          az login --service-principal \
+            --username "${ARM_CLIENT_ID}" \
+            --password "${ARM_CLIENT_SECRET}" \
+            --tenant "${ARM_TENANT_ID}"
+          az account set --subscription "${ARM_SUBSCRIPTION_ID}"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Verify runner tools
+        run: |
+          terraform version
+          terragrunt --version
+          az version
+
+      - name: Deploy portal package
+        run: ./infra/deploy-portal.sh
