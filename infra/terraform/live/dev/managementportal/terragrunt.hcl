@@ -4,6 +4,8 @@ include "root" {
 
 locals {
   env = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+  subscription_id = get_env("ARM_SUBSCRIPTION_ID", "39023a16-af6f-4b68-8498-e36556540d33")
+  container_registry_id = "/subscriptions/${local.subscription_id}/resourceGroups/${local.env.locals.coreaks.resource_group_name}/providers/Microsoft.ContainerRegistry/registries/${local.env.locals.coreaks.acr_name}"
 }
 
 dependency "coreaks" {
@@ -11,7 +13,6 @@ dependency "coreaks" {
 
   mock_outputs = {
     default_image = "forgeaksdevacr01.azurecr.io/default-app:latest"
-    acr_id        = "/subscriptions/mock/resourceGroups/mock/providers/Microsoft.ContainerRegistry/registries/mock"
   }
 }
 
@@ -30,6 +31,6 @@ inputs = {
   managementportal_subnet_name     = local.env.locals.network.managementportal_subnet_name
   managementportal_subnet_address_prefixes = local.env.locals.network.managementportal_subnet_cidrs
   default_image                    = dependency.coreaks.outputs.default_image
-  container_registry_id            = dependency.coreaks.outputs.acr_id
+  container_registry_id            = local.container_registry_id
   dry_run                          = "false"
 }
