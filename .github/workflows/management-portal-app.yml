@@ -1,0 +1,54 @@
+name: management-portal-app
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash
+    env:
+      ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      TFSTATE_RESOURCE_GROUP: ${{ vars.TFSTATE_RESOURCE_GROUP }}
+      TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+      TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER }}
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        run: |
+          az login --service-principal \
+            --username "${ARM_CLIENT_ID}" \
+            --password "${ARM_CLIENT_SECRET}" \
+            --tenant "${ARM_TENANT_ID}"
+          az account set --subscription "${ARM_SUBSCRIPTION_ID}"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Verify runner tools
+        run: |
+          terraform version
+          terragrunt --version
+          az version
+          zip -v | head -n 1 || true
+
+      - name: Ensure management portal infra
+        working-directory: infra/terraform/live/${{ env.ENVIRONMENT }}/managementportal
+        run: terragrunt apply --terragrunt-non-interactive --auto-approve
+
+      - name: Deploy management portal package
+        run: ./infra/deploy-managementportal.sh

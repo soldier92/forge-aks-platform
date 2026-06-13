@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Submit Request</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem auto; max-width: 860px; }
+    form { display: grid; gap: 0.8rem; }
+    label { display: grid; gap: 0.35rem; }
+    input, select, textarea { padding: 0.6rem; font: inherit; }
+    textarea { min-height: 110px; }
+  </style>
+</head>
+<body>
+  <h1>Developer Environment Request</h1>
+  <p>Use <code>?role=developer</code> for demo mode. In production, this would be replaced with Azure Entra ID and role-based access control.</p>
+  <form action="/request?role={{ role }}" method="post">
+    <label>Team name <input name="team_name" value="payments" required></label>
+    <label>Environment
+      <select name="environment">
+        <option>dev</option>
+        <option>test</option>
+        <option>stage</option>
+        <option>prod</option>
+      </select>
+    </label>
+    <label>App type <input name="app_type" value="fastapi"></label>
+    <label>Requested CPU <input name="requested_cpu" value="500m"></label>
+    <label>Requested memory <input name="requested_memory" value="512Mi"></label>
+    <label>Container image <input name="image" value="{{ default_image or 'myacr.azurecr.io/default-app:latest' }}"></label>
+    <label>Requested by <input name="requested_by" value="developer@example.com"></label>
+    <label>Supervisor email <input name="supervisor_email" value="supervisor@example.com"></label>
+    <label>Business justification <textarea name="business_justification" required>Need a sandbox to test API changes before sprint demo.</textarea></label>
+    <button type="submit">Submit Request</button>
+  </form>
+</body>
+</html>

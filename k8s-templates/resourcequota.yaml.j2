@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: starter-quota
+  namespace: {{ namespace }}
+spec:
+  hard:
+    requests.cpu: "{{ requested_cpu }}"
+    requests.memory: "{{ requested_memory }}"
+    limits.cpu: "{{ requested_cpu }}"
+    limits.memory: "{{ requested_memory }}"
+    pods: "5"

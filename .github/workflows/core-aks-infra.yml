@@ -1,0 +1,66 @@
+name: core-aks-infra
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+      action:
+        description: Terraform action for core AKS infra
+        required: true
+        default: apply
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash
+    env:
+      ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      TFSTATE_RESOURCE_GROUP: ${{ vars.TFSTATE_RESOURCE_GROUP }}
+      TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+      TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER }}
+      TF_IN_AUTOMATION: "true"
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+      ACTION: ${{ github.event.inputs.action || 'apply' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        run: |
+          az login --service-principal \
+            --username "${ARM_CLIENT_ID}" \
+            --password "${ARM_CLIENT_SECRET}" \
+            --tenant "${ARM_TENANT_ID}"
+          az account set --subscription "${ARM_SUBSCRIPTION_ID}"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Verify runner tools
+        run: |
+          terraform version
+          terragrunt --version
+          az version
+
+      - name: Run coreaks Terragrunt
+        working-directory: infra/terraform/live/${{ env.ENVIRONMENT }}/coreaks
+        run: |
+          if [ "${ACTION}" = "apply" ] || [ "${ACTION}" = "destroy" ]; then
+            terragrunt "${ACTION}" --terragrunt-non-interactive --auto-approve
+          else
+            terragrunt "${ACTION}" --terragrunt-non-interactive
+          fi

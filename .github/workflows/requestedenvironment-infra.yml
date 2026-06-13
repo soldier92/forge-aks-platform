@@ -1,0 +1,86 @@
+name: requestedenvironment-infra
+
+on:
+  workflow_dispatch:
+    inputs:
+      team_name:
+        description: Team name
+        required: true
+      requested_environment:
+        description: Requested environment
+        required: true
+        default: dev
+      requested_cpu:
+        description: Requested CPU
+        required: true
+        default: 500m
+      requested_memory:
+        description: Requested memory
+        required: true
+        default: 512Mi
+      requested_image:
+        description: Container image
+        required: true
+      app_version:
+        description: Application version label
+        required: true
+        default: manual
+      action:
+        description: Terraform action for the requested environment
+        required: true
+        default: apply
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash
+    env:
+      ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      TFSTATE_RESOURCE_GROUP: ${{ vars.TFSTATE_RESOURCE_GROUP }}
+      TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+      TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER }}
+      TEAM_NAME: ${{ github.event.inputs.team_name }}
+      REQUESTED_ENVIRONMENT: ${{ github.event.inputs.requested_environment }}
+      REQUESTED_CPU: ${{ github.event.inputs.requested_cpu }}
+      REQUESTED_MEMORY: ${{ github.event.inputs.requested_memory }}
+      REQUESTED_IMAGE: ${{ github.event.inputs.requested_image }}
+      APP_VERSION: ${{ github.event.inputs.app_version }}
+      ACTION: ${{ github.event.inputs.action || 'apply' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        run: |
+          az login --service-principal \
+            --username "${ARM_CLIENT_ID}" \
+            --password "${ARM_CLIENT_SECRET}" \
+            --tenant "${ARM_TENANT_ID}"
+          az account set --subscription "${ARM_SUBSCRIPTION_ID}"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Verify runner tools
+        run: |
+          terraform version
+          terragrunt --version
+          az version
+          kubectl version --client
+
+      - name: Get coreaks kubeconfig
+        run: ./infra/get-kubeconfig.sh
+
+      - name: Apply requested environment
+        run: ./infra/apply-requested-environment.sh
