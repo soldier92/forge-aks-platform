@@ -1,5 +1,5 @@
 data "azurerm_virtual_network" "shared" {
-  virtual_network_name = var.existing_vnet_name
+  name                = var.existing_vnet_name
   resource_group_name  = var.existing_vnet_resource_group_name
 }
 
