@@ -76,11 +76,9 @@ jobs:
         run: |
           az acr login --name "$env:ACR_NAME"
           $builderName = "forgebuilder-$env:GITHUB_RUN_ID"
-          $existingBuilder = docker buildx inspect $builderName 2>$null
+          cmd /c "docker buildx use $builderName" | Out-Null
           if ($LASTEXITCODE -ne 0) {
-            docker buildx create --use --name $builderName --driver docker-container
-          } else {
-            docker buildx use $builderName
+            cmd /c "docker buildx create --use --name $builderName --driver docker-container"
           }
           docker buildx build --platform linux/amd64 --tag "$env:PORTAL_IMAGE" "$PWD/portal" --push
 
