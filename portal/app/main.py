@@ -46,6 +46,11 @@ def home(request: Request, role: str = Depends(_role), db: Session = Depends(get
     )
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/request", response_class=HTMLResponse)
 def request_form(request: Request, role: str = Depends(_role)):
     return templates.TemplateResponse(

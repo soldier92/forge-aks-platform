@@ -47,6 +47,7 @@ jobs:
           terragrunt --version
           az version
           docker version
+          docker buildx version
 
       - name: Resolve infra outputs
         run: |
@@ -74,8 +75,8 @@ jobs:
       - name: Build and push management portal image
         run: |
           az acr login --name "$env:ACR_NAME"
-          docker build -t "$env:PORTAL_IMAGE" "$PWD/portal"
-          docker push "$env:PORTAL_IMAGE"
+          docker buildx create --use --name forgebuilder --driver docker-container 2>$null
+          docker buildx build --platform linux/amd64 --tag "$env:PORTAL_IMAGE" "$PWD/portal" --push
 
       - name: Configure web app to use the container image
         run: |
@@ -94,7 +95,30 @@ jobs:
 
       - name: Health check
         run: |
-          Start-Sleep -Seconds 20
-          $url = "https://$env:WEB_APP_HOSTNAME/"
-          Write-Host "Checking $url"
-          Invoke-WebRequest -Uri $url -UseBasicParsing | Select-Object StatusCode
+          $url = "https://$env:WEB_APP_HOSTNAME/health"
+          $attempts = 18
+
+          for ($i = 1; $i -le $attempts; $i++) {
+            try {
+              Write-Host "Health check attempt $i/$attempts -> $url"
+              $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20
+              if ($response.StatusCode -eq 200) {
+                Write-Host "Management portal is healthy."
+                exit 0
+              }
+            } catch {
+              Write-Host "Health check attempt $i failed: $($_.Exception.Message)"
+            }
+
+            Start-Sleep -Seconds 10
+          }
+
+          throw "Management portal did not become healthy in time."
+
+      - name: Collect failure diagnostics
+        if: failure()
+        run: |
+          az webapp log config --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME" --docker-container-logging filesystem
+          az webapp config container show --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME"
+          az webapp show --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME"
+          az webapp log download --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME" --log-file "$env:RUNNER_TEMP\\managementportal-logs.zip"
