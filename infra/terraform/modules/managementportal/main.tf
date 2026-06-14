@@ -49,11 +49,12 @@ resource "azurerm_linux_web_app" "managementportal" {
   }
 
   site_config {
-    always_on         = true
-    app_command_line  = var.startup_command
-    ftps_state        = "Disabled"
-    health_check_path = "/health"
-    minimum_tls_version = "1.2"
+    always_on                          = true
+    app_command_line                   = var.startup_command
+    ftps_state                         = "Disabled"
+    health_check_eviction_time_in_min  = 2
+    health_check_path                  = "/health"
+    minimum_tls_version                = "1.2"
   }
 
   app_settings = merge(
