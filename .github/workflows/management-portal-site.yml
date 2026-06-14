@@ -75,7 +75,13 @@ jobs:
       - name: Build and push management portal image
         run: |
           az acr login --name "$env:ACR_NAME"
-          docker buildx create --use --name forgebuilder --driver docker-container 2>$null
+          $builderName = "forgebuilder"
+          $existingBuilder = docker buildx inspect $builderName 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            docker buildx create --use --name $builderName --driver docker-container
+          } else {
+            docker buildx use $builderName
+          }
           docker buildx build --platform linux/amd64 --tag "$env:PORTAL_IMAGE" "$PWD/portal" --push
 
       - name: Configure web app to use the container image
