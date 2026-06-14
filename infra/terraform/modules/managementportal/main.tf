@@ -68,7 +68,6 @@ resource "azurerm_linux_web_app" "managementportal" {
 
   lifecycle {
     ignore_changes = [
-      site_config,
       app_settings["DOCKER_CUSTOM_IMAGE_NAME"],
       app_settings["DOCKER_REGISTRY_SERVER_URL"],
       app_settings["DOCKER_REGISTRY_SERVER_USERNAME"],
