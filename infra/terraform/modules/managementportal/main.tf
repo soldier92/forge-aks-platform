@@ -59,6 +59,7 @@ resource "azurerm_linux_web_app" "managementportal" {
     {
       WEBSITES_PORT                  = "8000"
       WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+      CONTROLPLANE_DB_PATH           = "/tmp/controlplane.db"
       DRY_RUN                        = var.dry_run
       DEFAULT_IMAGE                  = var.default_image
     },
