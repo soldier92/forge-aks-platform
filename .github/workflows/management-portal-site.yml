@@ -91,7 +91,13 @@ jobs:
             --container-registry-url "https://$env:ACR_LOGIN_SERVER"
 
           $webConfigUri = "https://management.azure.com/subscriptions/$env:ARM_SUBSCRIPTION_ID/resourceGroups/$env:RESOURCE_GROUP/providers/Microsoft.Web/sites/$env:WEB_APP_NAME/config/web?api-version=2023-12-01"
-          $body = @{ properties = @{ acrUseManagedIdentityCreds = $true } } | ConvertTo-Json -Compress
+          $body = @{
+            properties = @{
+              acrUseManagedIdentityCreds = $true
+              appCommandLine = ""
+              healthCheckPath = "/health"
+            }
+          } | ConvertTo-Json -Compress
           az rest --method PATCH --uri $webConfigUri --headers "Content-Type=application/json" --body $body
 
       - name: Restart web app
@@ -139,11 +145,13 @@ jobs:
           Expand-Archive -Path $logZip -DestinationPath $logDir -Force
           Get-ChildItem -Path $logDir -Recurse | Select-Object FullName
 
-          $candidateLogs = @(
-            (Join-Path $logDir "LogFiles\\docker\\default_docker.log"),
-            (Join-Path $logDir "LogFiles\\docker\\docker.log"),
-            (Join-Path $logDir "LogFiles\\eventlog.xml")
-          )
+          $candidateLogs = Get-ChildItem -Path $logDir -Recurse -File |
+            Where-Object {
+              $_.Name -like "*docker*.log" -or
+              $_.Name -like "*containerStream*.log" -or
+              $_.FullName -like "*StartupLogs*"
+            } |
+            Select-Object -ExpandProperty FullName
 
           foreach ($logPath in $candidateLogs) {
             if (Test-Path $logPath) {

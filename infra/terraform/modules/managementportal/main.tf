@@ -50,8 +50,9 @@ resource "azurerm_linux_web_app" "managementportal" {
 
   site_config {
     always_on         = true
-    app_command_line  = var.startup_command != "" ? var.startup_command : null
+    app_command_line  = var.startup_command
     ftps_state        = "Disabled"
+    health_check_path = "/health"
     minimum_tls_version = "1.2"
   }
 
