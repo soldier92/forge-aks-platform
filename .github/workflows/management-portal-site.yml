@@ -98,7 +98,9 @@ jobs:
               healthCheckPath = "/health"
             }
           } | ConvertTo-Json -Compress
-          az rest --method PATCH --uri $webConfigUri --headers "Content-Type=application/json" --body $body
+          $bodyPath = Join-Path $env:RUNNER_TEMP "webapp-config-patch.json"
+          Set-Content -Path $bodyPath -Value $body -Encoding ascii
+          az rest --method PATCH --uri $webConfigUri --headers "Content-Type=application/json" --body "@$bodyPath"
 
       - name: Restart web app
         run: |
