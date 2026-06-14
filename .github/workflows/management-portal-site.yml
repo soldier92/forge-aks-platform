@@ -91,12 +91,16 @@ jobs:
           az rest --method PATCH --uri $webConfigUri --headers "Content-Type=application/json" --body $body
 
       - name: Restart web app
-        run: az webapp restart --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME"
+        run: |
+          az webapp log config --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME" --docker-container-logging filesystem
+          az webapp restart --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME"
 
       - name: Health check
         run: |
           $url = "https://$env:WEB_APP_HOSTNAME/health"
-          $attempts = 18
+          $attempts = 30
+
+          Start-Sleep -Seconds 30
 
           for ($i = 1; $i -le $attempts; $i++) {
             try {
@@ -118,7 +122,28 @@ jobs:
       - name: Collect failure diagnostics
         if: failure()
         run: |
-          az webapp log config --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME" --docker-container-logging filesystem
           az webapp config container show --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME"
           az webapp show --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME"
-          az webapp log download --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME" --log-file "$env:RUNNER_TEMP\\managementportal-logs.zip"
+          $logZip = Join-Path $env:RUNNER_TEMP "managementportal-logs.zip"
+          $logDir = Join-Path $env:RUNNER_TEMP "managementportal-logs"
+          az webapp log download --resource-group "$env:RESOURCE_GROUP" --name "$env:WEB_APP_NAME" --log-file $logZip
+
+          if (Test-Path $logDir) {
+            Remove-Item -LiteralPath $logDir -Recurse -Force
+          }
+
+          Expand-Archive -Path $logZip -DestinationPath $logDir -Force
+          Get-ChildItem -Path $logDir -Recurse | Select-Object FullName
+
+          $candidateLogs = @(
+            (Join-Path $logDir "LogFiles\\docker\\default_docker.log"),
+            (Join-Path $logDir "LogFiles\\docker\\docker.log"),
+            (Join-Path $logDir "LogFiles\\eventlog.xml")
+          )
+
+          foreach ($logPath in $candidateLogs) {
+            if (Test-Path $logPath) {
+              Write-Host "===== $logPath ====="
+              Get-Content -Path $logPath -Tail 200
+            }
+          }
