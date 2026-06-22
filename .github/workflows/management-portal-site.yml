@@ -10,7 +10,7 @@ on:
       image_tag:
         description: Image tag for the management portal container
         required: true
-        default: latest
+        default: auto
 
 jobs:
   deploy:
@@ -27,7 +27,7 @@ jobs:
       TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
       TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER }}
       ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-      IMAGE_TAG: ${{ github.event.inputs.image_tag || 'latest' }}
+      IMAGE_TAG: ${{ github.event.inputs.image_tag || 'auto' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -65,12 +65,20 @@ jobs:
           $hostName = (terragrunt output -raw default_hostname).Trim()
           Pop-Location
 
+          if ([string]::IsNullOrWhiteSpace($env:IMAGE_TAG) -or $env:IMAGE_TAG -eq "auto" -or $env:IMAGE_TAG -eq "latest") {
+            $shortSha = $env:GITHUB_SHA.Substring(0, 12)
+            $imageTag = "portal-$shortSha-$env:GITHUB_RUN_ID"
+          } else {
+            $imageTag = $env:IMAGE_TAG
+          }
+
           "ACR_NAME=$acrName" | Out-File -FilePath $env:GITHUB_ENV -Append
           "ACR_LOGIN_SERVER=$acrLoginServer" | Out-File -FilePath $env:GITHUB_ENV -Append
           "WEB_APP_NAME=$webAppName" | Out-File -FilePath $env:GITHUB_ENV -Append
           "RESOURCE_GROUP=$resourceGroup" | Out-File -FilePath $env:GITHUB_ENV -Append
           "WEB_APP_HOSTNAME=$hostName" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "PORTAL_IMAGE=$acrLoginServer/managementportal:$env:IMAGE_TAG" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "IMAGE_TAG=$imageTag" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "PORTAL_IMAGE=$acrLoginServer/managementportal:$imageTag" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Build and push management portal image
         run: |
