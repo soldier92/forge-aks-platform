@@ -47,6 +47,25 @@ jobs:
         working-directory: infra/terraform/live/${{ env.ENVIRONMENT }}/managementportal
         run: terragrunt apply --terragrunt-non-interactive --auto-approve
 
+      - name: Configure management portal container identity
+        working-directory: infra/terraform/live/${{ env.ENVIRONMENT }}/managementportal
+        run: |
+          $resourceGroup = (terragrunt output -raw resource_group_name).Trim()
+          $webAppName = (terragrunt output -raw web_app_name).Trim()
+          $webConfigUri = "https://management.azure.com/subscriptions/$env:ARM_SUBSCRIPTION_ID/resourceGroups/$resourceGroup/providers/Microsoft.Web/sites/$webAppName/config/web?api-version=2023-12-01"
+
+          $body = @{
+            properties = @{
+              acrUseManagedIdentityCreds = $true
+              appCommandLine = ""
+              healthCheckPath = "/health"
+            }
+          } | ConvertTo-Json -Compress
+
+          $bodyPath = Join-Path $env:RUNNER_TEMP "managementportal-web-config-patch.json"
+          Set-Content -Path $bodyPath -Value $body -Encoding ascii
+          az rest --method PATCH --uri $webConfigUri --headers "Content-Type=application/json" --body "@$bodyPath"
+
       - name: Configure management portal dispatch secret
         working-directory: infra/terraform/live/${{ env.ENVIRONMENT }}/managementportal
         run: |
