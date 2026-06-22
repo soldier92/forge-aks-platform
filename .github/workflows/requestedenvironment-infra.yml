@@ -25,6 +25,10 @@ on:
         description: Application version label
         required: true
         default: manual
+      deployment_type:
+        description: Requested AKS deployment type
+        required: true
+        default: aks-namespace-app
       action:
         description: Terraform action for the requested environment
         required: true
@@ -34,6 +38,10 @@ on:
           - plan
           - apply
           - destroy
+
+concurrency:
+  group: requestedenvironment-${{ github.event.inputs.deployment_type || 'aks-namespace-app' }}-${{ github.event.inputs.team_name }}-${{ github.event.inputs.requested_environment }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -55,6 +63,7 @@ jobs:
       REQUESTED_MEMORY: ${{ github.event.inputs.requested_memory }}
       REQUESTED_IMAGE: ${{ github.event.inputs.requested_image }}
       APP_VERSION: ${{ github.event.inputs.app_version }}
+      DEPLOYMENT_TYPE: ${{ github.event.inputs.deployment_type || 'aks-namespace-app' }}
       ACTION: ${{ github.event.inputs.action || 'apply' }}
       COREAKS_ENVIRONMENT: dev
     steps:
@@ -90,6 +99,12 @@ jobs:
 
       - name: Apply requested environment
         run: |
+          if ($env:DEPLOYMENT_TYPE -eq "aks-namespace-app") {
+            $env:REQUESTEDENVIRONMENT_MODULE_SOURCE = "../../modules/requestedenvironment"
+          } else {
+            throw "Unsupported deployment_type '$env:DEPLOYMENT_TYPE'. Add a module mapping in this workflow before using it."
+          }
+
           $runnerDir = Join-Path $PWD "infra/terraform/live/team-runner"
           Push-Location $runnerDir
           if ($env:ACTION -in @("apply", "destroy")) {

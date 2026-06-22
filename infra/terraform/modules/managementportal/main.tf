@@ -75,6 +75,7 @@ resource "azurerm_linux_web_app" "managementportal" {
       app_settings["DOCKER_REGISTRY_SERVER_USERNAME"],
       app_settings["DOCKER_REGISTRY_SERVER_PASSWORD"],
       app_settings["WEBSITES_ENABLE_APP_SERVICE_STORAGE"],
+      app_settings["AKS_TEAM_TOKEN"],
     ]
   }
 }

@@ -1,6 +1,6 @@
 # AI-Assisted Azure AKS Platform Control Plane
 
-This repository is a prototype internal developer platform that separates the control plane from the workload plane. A FastAPI portal runs outside AKS and accepts environment requests from developers. Platform admins review those requests, see deterministic AI-style recommendations, and approve or reject provisioning. Approved requests render Kubernetes manifests and deploy a starter FastAPI workload into AKS.
+This repository is a prototype internal developer platform that separates the control plane from the workload plane. A FastAPI portal runs outside AKS and accepts environment requests from developers. Platform admins review those requests, see deterministic AI-style recommendations, and approve or reject provisioning. Approved requests dispatch a GitHub Actions workflow that applies the requested AKS environment through Terraform.
 
 ## Project Purpose
 
@@ -16,8 +16,8 @@ The goal is to demonstrate a lightweight enterprise-style platform engineering w
 - `portal/` runs outside AKS and is designed for Azure App Service.
 - `AKS` hosts only team workloads and their namespace-scoped resources.
 - `SQLite` is used locally for a beginner-friendly demo data store.
-- `Jinja2` templates render Kubernetes YAML for approved requests.
-- `kubectl` applies the rendered manifests to AKS.
+- GitHub Actions dispatches approved requests to the `requestedenvironment-infra` workflow.
+- Terraform manages requested AKS team environments with isolated state per deployment type, team, and environment.
 
 ## Azure Resources
 
@@ -47,7 +47,7 @@ The goal is to demonstrate a lightweight enterprise-style platform engineering w
 1. Developer submits a request in the portal.
 2. The portal stores the request and shows an AI recommendation.
 3. An admin reviews the request in the control plane.
-4. Approved requests trigger manifest rendering and deployment to AKS.
+4. Approved requests trigger the `requestedenvironment-infra` GitHub Actions workflow.
 5. The default FastAPI app serves traffic inside the namespace through a ClusterIP service.
 
 ## Approval Flow
@@ -55,8 +55,8 @@ The goal is to demonstrate a lightweight enterprise-style platform engineering w
 1. Request starts in `PENDING_APPROVAL`.
 2. Admin can move it to `NEEDS_CHANGES`, `REJECTED`, or `APPROVED`.
 3. Approved requests enter `PROVISIONING`.
-4. A successful deployment ends in `DEPLOYED`.
-5. A failed `kubectl` operation ends in `FAILED`.
+4. A successful dispatch leaves the request in `PROVISIONING` while GitHub Actions applies Terraform.
+5. A failed workflow dispatch ends in `FAILED`.
 
 ## Data Storage
 
@@ -129,6 +129,7 @@ Required GitHub repository variables:
 Required GitHub repository secret:
 
 - `ARM_CLIENT_SECRET`
+- `AKS_TEAM_TOKEN` fine-grained PAT or equivalent token that can dispatch the `requestedenvironment-infra.yml` workflow
 
 Runner prerequisites:
 
@@ -166,6 +167,15 @@ The GitHub Actions workflows under `.github/workflows/` are designed for a self-
 
 The `requestedenvironment` path is intentionally AKS-only for now. It does not create extra Azure network resources per team request. Each team/environment deployment gets its own Terraform state key so you can rerun one team safely to recreate manually deleted namespace-scoped resources.
 
+Requested environment flow:
+
+1. A developer submits a team environment request in the management portal.
+2. An admin approves the request.
+3. The portal dispatches `requestedenvironment-infra.yml` with `team_name`, `requested_environment`, CPU, memory, image, `deployment_type`, and `action=apply`.
+4. The workflow maps `deployment_type=aks-namespace-app` to the current requested-environment Terraform module.
+5. Terragrunt stores state under `requestedenvironment/<deployment_type>/<team>/<environment>.terraform.tfstate`, so rerunning team 4 only reconciles team 4 resources.
+6. Future AKS deployment shapes can reuse the same pipeline by adding another `deployment_type` mapping to the workflow and a corresponding Terraform module.
+
 ## Cleanup Instructions
 
 ```bash
@@ -176,6 +186,6 @@ ENVIRONMENT=dev ./destroy-azure.sh
 ## CV Bullet Points
 
 - Built a prototype internal developer platform for Azure AKS with a control plane running outside the cluster.
-- Implemented an approval workflow that combines platform governance and AI-assisted request review.
-- Automated namespace provisioning and secure baseline Kubernetes resources with Jinja2 and `kubectl`.
+- Implemented an approval workflow that combines platform governance, AI-assisted request review, and GitHub Actions dispatch.
+- Automated namespace provisioning and secure baseline Kubernetes resources with Terraform.
 - Created Azure deployment helpers for AKS, ACR, and App Service.

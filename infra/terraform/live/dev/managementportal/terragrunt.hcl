@@ -33,4 +33,11 @@ inputs = {
   default_image                    = dependency.coreaks.outputs.default_image
   container_registry_id            = local.container_registry_id
   dry_run                          = "false"
+  app_settings = {
+    GITHUB_API_URL                        = "https://api.github.com"
+    GITHUB_REPOSITORY                     = get_env("GITHUB_REPOSITORY", "")
+    GITHUB_WORKFLOW_FILE                  = "requestedenvironment-infra.yml"
+    GITHUB_WORKFLOW_REF                   = get_env("GITHUB_REF_NAME", "main")
+    REQUESTED_ENVIRONMENT_DEPLOYMENT_TYPE = "aks-namespace-app"
+  }
 }
