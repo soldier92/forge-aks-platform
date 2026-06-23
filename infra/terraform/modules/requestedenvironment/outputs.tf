@@ -3,9 +3,9 @@ output "namespace" {
 }
 
 output "deployment_name" {
-  value = kubernetes_deployment_v1.team.metadata[0].name
+  value = try(kubernetes_deployment_v1.team[0].metadata[0].name, null)
 }
 
 output "service_name" {
-  value = kubernetes_service.team.metadata[0].name
+  value = try(kubernetes_service.team[0].metadata[0].name, null)
 }

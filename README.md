@@ -9,7 +9,7 @@ The goal is to demonstrate a lightweight enterprise-style platform engineering w
 - Developers request team-specific AKS environments through a portal.
 - Supervisors or platform admins review governance, cost, and risk before approval.
 - The control plane provisions namespaces and baseline guardrails instead of giving every team full cluster access.
-- A default workload is deployed so the namespace is immediately useful.
+- Starter workloads can be added later, but the default requested environment flow is infra-only.
 
 ## Target Architecture
 
@@ -48,7 +48,7 @@ The goal is to demonstrate a lightweight enterprise-style platform engineering w
 2. The portal stores the request and shows an AI recommendation.
 3. An admin reviews the request in the control plane.
 4. Approved requests trigger the `requestedenvironment-infra` GitHub Actions workflow.
-5. The default FastAPI app serves traffic inside the namespace through a ClusterIP service.
+5. The approved flow provisions namespace-scoped infrastructure inside AKS without deploying a starter workload by default.
 
 ## Approval Flow
 
@@ -162,7 +162,7 @@ The GitHub Actions workflows under `.github/workflows/` are designed for a self-
 - `core-aks-infra.yml` for only shared `coreaks` Azure infrastructure
 - `management-portal-app.yml` for only `managementportal` infrastructure
 - `management-portal-site.yml` for building and deploying the management portal container image
-- `default-app-image.yml` for building and pushing the starter `default-app` image into ACR
+- `default-app-image.yml` for building and pushing the optional starter `default-app` image into ACR
 - `requestedenvironment-infra.yml` for only approved team environments inside AKS
 
 Recommended run order for team environments:
@@ -170,9 +170,9 @@ Recommended run order for team environments:
 1. Run `core-aks-infra.yml` to provision AKS and ACR.
 2. Run `default-app-image.yml` to publish a known-good `default-app` image into ACR.
 3. Submit and approve a team request in the portal.
-4. Let `requestedenvironment-infra.yml` deploy the namespace-scoped team environment using the requested image tag.
+4. Let `requestedenvironment-infra.yml` deploy the namespace-scoped team environment.
 
-The requested environment workflow does not build images. It now validates that the requested image already exists in ACR before applying Terraform, so image problems fail fast instead of timing out during Kubernetes rollout.
+The requested environment workflow is infra-only by default and does not deploy the starter app unless `DEPLOY_WORKLOAD=true` is deliberately enabled later.
 
 The `requestedenvironment` path is intentionally AKS-only for now. It does not create extra Azure network resources per team request. Each team/environment deployment gets its own Terraform state key so you can rerun one team safely to recreate manually deleted namespace-scoped resources.
 

@@ -63,6 +63,7 @@ jobs:
       REQUESTED_MEMORY: ${{ github.event.inputs.requested_memory }}
       REQUESTED_IMAGE: ${{ github.event.inputs.requested_image }}
       APP_VERSION: ${{ github.event.inputs.app_version }}
+      DEPLOY_WORKLOAD: "false"
       DEPLOYMENT_TYPE: ${{ github.event.inputs.deployment_type || 'aks-namespace-app' }}
       ACTION: ${{ github.event.inputs.action || 'apply' }}
       COREAKS_ENVIRONMENT: dev
@@ -114,6 +115,7 @@ jobs:
           kubectl get nodes
 
       - name: Validate requested image exists in ACR
+        if: env.DEPLOY_WORKLOAD == 'true'
         run: |
           $ErrorActionPreference = "Stop"
           $ProgressPreference = "SilentlyContinue"
@@ -156,13 +158,18 @@ jobs:
           $namespace = "team-$teamSlug-$environmentSlug"
           $deploymentName = "starter-api"
 
+          if (($env:DEPLOY_WORKLOAD -ne "true") -and ($stateEntries -contains "kubernetes_deployment.team")) {
+            terragrunt state rm kubernetes_deployment.team
+            $stateEntries = terragrunt state list 2>$null
+          }
+
           if ($stateEntries -contains "kubernetes_deployment.team") {
             Write-Host "Removing legacy deployment state entry kubernetes_deployment.team..."
             terragrunt state rm kubernetes_deployment.team
             $stateEntries = terragrunt state list 2>$null
           }
 
-          if (-not ($stateEntries -contains "kubernetes_deployment_v1.team")) {
+          if (($env:DEPLOY_WORKLOAD -eq "true") -and -not ($stateEntries -contains "kubernetes_deployment_v1.team")) {
             $deploymentExists = $false
             kubectl get deployment $deploymentName -n $namespace --ignore-not-found | Out-Null
             if ($LASTEXITCODE -eq 0) {

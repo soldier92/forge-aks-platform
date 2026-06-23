@@ -9,6 +9,26 @@ locals {
   }
 }
 
+moved {
+  from = kubernetes_config_map.team
+  to   = kubernetes_config_map.team[0]
+}
+
+moved {
+  from = kubernetes_deployment_v1.team
+  to   = kubernetes_deployment_v1.team[0]
+}
+
+moved {
+  from = kubernetes_service.team
+  to   = kubernetes_service.team[0]
+}
+
+moved {
+  from = kubernetes_network_policy.team
+  to   = kubernetes_network_policy.team[0]
+}
+
 resource "kubernetes_namespace" "team" {
   metadata {
     name = local.namespace
@@ -28,10 +48,10 @@ resource "kubernetes_resource_quota" "team" {
 
   spec {
     hard = {
-      "requests.cpu"    = var.requested_cpu
-      "requests.memory" = var.requested_memory
-      "limits.cpu"      = var.requested_cpu
-      "limits.memory"   = var.requested_memory
+      "requests.cpu"    = var.quota_cpu
+      "requests.memory" = var.quota_memory
+      "limits.cpu"      = var.quota_cpu
+      "limits.memory"   = var.quota_memory
       "pods"            = "5"
     }
   }
@@ -98,6 +118,8 @@ resource "kubernetes_role_binding" "team_reader" {
 }
 
 resource "kubernetes_config_map" "team" {
+  count = var.deploy_workload ? 1 : 0
+
   metadata {
     name      = "${var.app_name}-config"
     namespace = kubernetes_namespace.team.metadata[0].name
@@ -111,6 +133,8 @@ resource "kubernetes_config_map" "team" {
 }
 
 resource "kubernetes_deployment_v1" "team" {
+  count = var.deploy_workload ? 1 : 0
+
   metadata {
     name      = var.app_name
     namespace = kubernetes_namespace.team.metadata[0].name
@@ -148,7 +172,7 @@ resource "kubernetes_deployment_v1" "team" {
 
           env_from {
             config_map_ref {
-              name = kubernetes_config_map.team.metadata[0].name
+              name = kubernetes_config_map.team[0].metadata[0].name
             }
           }
 
@@ -198,6 +222,8 @@ resource "kubernetes_deployment_v1" "team" {
 }
 
 resource "kubernetes_service" "team" {
+  count = var.deploy_workload ? 1 : 0
+
   metadata {
     name      = var.app_name
     namespace = kubernetes_namespace.team.metadata[0].name
@@ -218,6 +244,8 @@ resource "kubernetes_service" "team" {
 }
 
 resource "kubernetes_network_policy" "team" {
+  count = var.deploy_workload ? 1 : 0
+
   metadata {
     name      = "${var.app_name}-policy"
     namespace = kubernetes_namespace.team.metadata[0].name

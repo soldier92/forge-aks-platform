@@ -10,6 +10,9 @@ locals {
   image            = get_env("REQUESTED_IMAGE", "forgeaksdevacr01.azurecr.io/default-app:latest")
   requested_cpu    = get_env("REQUESTED_CPU", "500m")
   requested_memory = get_env("REQUESTED_MEMORY", "512Mi")
+  quota_cpu        = get_env("QUOTA_CPU", "1000m")
+  quota_memory     = get_env("QUOTA_MEMORY", "1024Mi")
+  deploy_workload  = lower(get_env("DEPLOY_WORKLOAD", "false")) == "true"
   app_version      = get_env("APP_VERSION", "manual")
 
   team_slug            = trim(replace(replace(replace(replace(lower(local.team_name), " ", "-"), "_", "-"), "/", "-"), "\\", "-"), "-")
@@ -54,5 +57,8 @@ inputs = {
   image            = local.image
   requested_cpu    = local.requested_cpu
   requested_memory = local.requested_memory
+  quota_cpu        = local.quota_cpu
+  quota_memory     = local.quota_memory
+  deploy_workload  = local.deploy_workload
   app_version      = local.app_version
 }
