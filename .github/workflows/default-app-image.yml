@@ -78,6 +78,7 @@ jobs:
             --registry "$env:ACR_NAME" `
             --image "default-app:$env:RESOLVED_IMAGE_TAG" `
             --image "default-app:latest" `
+            --no-logs `
             "$PWD/default-app"
 
       - name: Show published image

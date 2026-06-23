@@ -88,6 +88,7 @@ jobs:
           az acr build `
             --registry "$env:ACR_NAME" `
             --image "managementportal:$env:IMAGE_TAG" `
+            --no-logs `
             "$PWD/portal"
 
       - name: Configure web app to use the container image
