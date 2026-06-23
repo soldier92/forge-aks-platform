@@ -46,8 +46,6 @@ jobs:
           terraform version
           terragrunt --version
           az version
-          docker version
-          docker buildx version
 
       - name: Resolve infra outputs
         run: |
@@ -82,13 +80,15 @@ jobs:
 
       - name: Build and push management portal image
         run: |
-          az acr login --name "$env:ACR_NAME"
-          $builderName = "forgebuilder-$env:GITHUB_RUN_ID"
-          cmd /c "docker buildx use $builderName" | Out-Null
-          if ($LASTEXITCODE -ne 0) {
-            cmd /c "docker buildx create --use --name $builderName --driver docker-container"
-          }
-          docker buildx build --platform linux/amd64 --tag "$env:PORTAL_IMAGE" "$PWD/portal" --push
+          chcp 65001 > $null
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          $env:PYTHONIOENCODING = "utf-8"
+          $env:PYTHONUTF8 = "1"
+          az acr build `
+            --registry "$env:ACR_NAME" `
+            --image "managementportal:$env:IMAGE_TAG" `
+            "$PWD/portal"
 
       - name: Configure web app to use the container image
         run: |
