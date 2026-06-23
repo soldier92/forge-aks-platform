@@ -135,7 +135,7 @@ jobs:
           }
 
           $repository = ($segments[1..($segments.Length - 1)] -join "/")
-          Write-Host "Validating requested image '$repository:$tag' in ACR '$acrName'..."
+          Write-Host ("Validating requested image '{0}:{1}' in ACR '{2}'..." -f $repository, $tag, $acrName)
           az acr repository show --name "$acrName" --image "$repository`:$tag" --output none
           Write-Host "Requested image is present in ACR."
 
