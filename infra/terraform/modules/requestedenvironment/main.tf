@@ -110,7 +110,7 @@ resource "kubernetes_config_map" "team" {
   }
 }
 
-resource "kubernetes_deployment" "team" {
+resource "kubernetes_deployment_v1" "team" {
   metadata {
     name      = var.app_name
     namespace = kubernetes_namespace.team.metadata[0].name

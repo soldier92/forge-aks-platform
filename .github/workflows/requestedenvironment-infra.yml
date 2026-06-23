@@ -150,6 +150,11 @@ jobs:
           $runnerDir = Join-Path $PWD "infra/terraform/live/team-runner"
           Push-Location $runnerDir
           terragrunt init --terragrunt-non-interactive -upgrade
+          $stateEntries = terragrunt state list 2>$null
+          if (($stateEntries -contains "kubernetes_deployment.team") -and -not ($stateEntries -contains "kubernetes_deployment_v1.team")) {
+            Write-Host "Migrating deployment state from kubernetes_deployment.team to kubernetes_deployment_v1.team..."
+            terragrunt state mv kubernetes_deployment.team kubernetes_deployment_v1.team
+          }
           if ($env:ACTION -in @("apply", "destroy")) {
             terragrunt $env:ACTION --terragrunt-non-interactive --auto-approve
           } else {
