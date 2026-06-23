@@ -1,0 +1,81 @@
+name: default-app-image
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+      image_tag:
+        description: Image tag for the default app container
+        required: true
+        default: auto
+
+jobs:
+  build:
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: powershell
+    env:
+      ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      TFSTATE_RESOURCE_GROUP: ${{ vars.TFSTATE_RESOURCE_GROUP }}
+      TFSTATE_STORAGE_ACCOUNT: ${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+      TFSTATE_CONTAINER: ${{ vars.TFSTATE_CONTAINER }}
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+      IMAGE_TAG: ${{ github.event.inputs.image_tag || 'auto' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        run: |
+          az login --service-principal --username "$env:ARM_CLIENT_ID" --password "$env:ARM_CLIENT_SECRET" --tenant "$env:ARM_TENANT_ID"
+          az account set --subscription "$env:ARM_SUBSCRIPTION_ID"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Verify runner tools
+        run: |
+          terraform version
+          terragrunt --version
+          az --version
+
+      - name: Resolve coreaks outputs
+        run: |
+          $coreAksDir = Join-Path $PWD "infra/terraform/live/$env:ENVIRONMENT/coreaks"
+          Push-Location $coreAksDir
+          $acrName = (terragrunt output -raw acr_name).Trim()
+          $acrLoginServer = (terragrunt output -raw acr_login_server).Trim()
+          Pop-Location
+
+          if ([string]::IsNullOrWhiteSpace($env:IMAGE_TAG) -or $env:IMAGE_TAG -eq "auto") {
+            $shortSha = $env:GITHUB_SHA.Substring(0, 12)
+            $resolvedTag = "default-app-$shortSha-$env:GITHUB_RUN_ID"
+          } else {
+            $resolvedTag = $env:IMAGE_TAG
+          }
+
+          "ACR_NAME=$acrName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "ACR_LOGIN_SERVER=$acrLoginServer" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "RESOLVED_IMAGE_TAG=$resolvedTag" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "DEFAULT_APP_IMAGE=$acrLoginServer/default-app:$resolvedTag" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build and push default app image
+        run: |
+          az acr build `
+            --registry "$env:ACR_NAME" `
+            --image "default-app:$env:RESOLVED_IMAGE_TAG" `
+            --image "default-app:latest" `
+            "$PWD/default-app"
+
+      - name: Show published image
+        run: |
+          Write-Host "Published default app image: $env:DEFAULT_APP_IMAGE"
+          Write-Host "Alias updated: $env:ACR_LOGIN_SERVER/default-app:latest"

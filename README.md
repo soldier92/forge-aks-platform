@@ -136,7 +136,6 @@ Runner prerequisites:
 - Azure CLI
 - Terraform
 - Terragrunt
-- Docker
 
 ## Azure Deployment Instructions
 
@@ -163,7 +162,17 @@ The GitHub Actions workflows under `.github/workflows/` are designed for a self-
 - `core-aks-infra.yml` for only shared `coreaks` Azure infrastructure
 - `management-portal-app.yml` for only `managementportal` infrastructure
 - `management-portal-site.yml` for building and deploying the management portal container image
+- `default-app-image.yml` for building and pushing the starter `default-app` image into ACR
 - `requestedenvironment-infra.yml` for only approved team environments inside AKS
+
+Recommended run order for team environments:
+
+1. Run `core-aks-infra.yml` to provision AKS and ACR.
+2. Run `default-app-image.yml` to publish a known-good `default-app` image into ACR.
+3. Submit and approve a team request in the portal.
+4. Let `requestedenvironment-infra.yml` deploy the namespace-scoped team environment using the requested image tag.
+
+The requested environment workflow does not build images. It now validates that the requested image already exists in ACR before applying Terraform, so image problems fail fast instead of timing out during Kubernetes rollout.
 
 The `requestedenvironment` path is intentionally AKS-only for now. It does not create extra Azure network resources per team request. Each team/environment deployment gets its own Terraform state key so you can rerun one team safely to recreate manually deleted namespace-scoped resources.
 

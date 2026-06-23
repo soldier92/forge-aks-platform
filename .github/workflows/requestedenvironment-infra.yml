@@ -113,6 +113,32 @@ jobs:
           Write-Host "Testing AKS connectivity with TLS verification temporarily bypassed..."
           kubectl get nodes
 
+      - name: Validate requested image exists in ACR
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ProgressPreference = "SilentlyContinue"
+
+          $coreAksDir = Join-Path $PWD "infra/terraform/live/$env:COREAKS_ENVIRONMENT/coreaks"
+          Push-Location $coreAksDir
+          $acrName = (terragrunt output -raw acr_name).Trim()
+          Pop-Location
+
+          $imageRef = $env:REQUESTED_IMAGE.Trim()
+          $registryAndPath, $tag = $imageRef -split ":", 2
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            throw "Requested image '$imageRef' must include an explicit tag."
+          }
+
+          $segments = $registryAndPath.Split("/")
+          if ($segments.Length -lt 2) {
+            throw "Requested image '$imageRef' must include a repository name."
+          }
+
+          $repository = ($segments[1..($segments.Length - 1)] -join "/")
+          Write-Host "Validating requested image '$repository:$tag' in ACR '$acrName'..."
+          az acr repository show --name "$acrName" --image "$repository`:$tag" --output none
+          Write-Host "Requested image is present in ACR."
+
       - name: Apply requested environment
         run: |
           if ($env:DEPLOYMENT_TYPE -eq "aks-namespace-app") {
