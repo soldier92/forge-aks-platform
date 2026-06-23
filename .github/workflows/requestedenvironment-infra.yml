@@ -149,6 +149,7 @@ jobs:
 
           $runnerDir = Join-Path $PWD "infra/terraform/live/team-runner"
           Push-Location $runnerDir
+          terragrunt init --terragrunt-non-interactive -upgrade
           if ($env:ACTION -in @("apply", "destroy")) {
             terragrunt $env:ACTION --terragrunt-non-interactive --auto-approve
           } else {
