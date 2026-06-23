@@ -12,9 +12,9 @@ locals {
   requested_memory = get_env("REQUESTED_MEMORY", "512Mi")
   app_version      = get_env("APP_VERSION", "manual")
 
-  team_slug            = trim(regexreplace(regexreplace(lower(local.team_name), "[^a-z0-9-]", "-"), "-+", "-"), "-")
-  environment_slug     = trim(regexreplace(regexreplace(lower(local.environment_name), "[^a-z0-9-]", "-"), "-+", "-"), "-")
-  deployment_type_slug = trim(regexreplace(regexreplace(lower(local.deployment_type), "[^a-z0-9-]", "-"), "-+", "-"), "-")
+  team_slug            = trim(replace(replace(replace(replace(lower(local.team_name), " ", "-"), "_", "-"), "/", "-"), "\\", "-"), "-")
+  environment_slug     = trim(replace(replace(replace(replace(lower(local.environment_name), " ", "-"), "_", "-"), "/", "-"), "\\", "-"), "-")
+  deployment_type_slug = trim(replace(replace(replace(replace(lower(local.deployment_type), " ", "-"), "_", "-"), "/", "-"), "\\", "-"), "-")
 }
 
 terraform {
