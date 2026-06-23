@@ -151,9 +151,28 @@ jobs:
           Push-Location $runnerDir
           terragrunt init --terragrunt-non-interactive -upgrade
           $stateEntries = terragrunt state list 2>$null
-          if (($stateEntries -contains "kubernetes_deployment.team") -and -not ($stateEntries -contains "kubernetes_deployment_v1.team")) {
-            Write-Host "Migrating deployment state from kubernetes_deployment.team to kubernetes_deployment_v1.team..."
-            terragrunt state mv kubernetes_deployment.team kubernetes_deployment_v1.team
+          $teamSlug = $env:TEAM_NAME.ToLower().Replace(" ", "-").Replace("_", "-").Replace("/", "-").Replace("\\", "-").Trim("-")
+          $environmentSlug = $env:REQUESTED_ENVIRONMENT.ToLower().Replace(" ", "-").Replace("_", "-").Replace("/", "-").Replace("\\", "-").Trim("-")
+          $namespace = "team-$teamSlug-$environmentSlug"
+          $deploymentName = "starter-api"
+
+          if ($stateEntries -contains "kubernetes_deployment.team") {
+            Write-Host "Removing legacy deployment state entry kubernetes_deployment.team..."
+            terragrunt state rm kubernetes_deployment.team
+            $stateEntries = terragrunt state list 2>$null
+          }
+
+          if (-not ($stateEntries -contains "kubernetes_deployment_v1.team")) {
+            $deploymentExists = $false
+            kubectl get deployment $deploymentName -n $namespace --ignore-not-found | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+              $deploymentExists = [bool](kubectl get deployment $deploymentName -n $namespace -o name 2>$null)
+            }
+
+            if ($deploymentExists) {
+              Write-Host "Importing live deployment into kubernetes_deployment_v1.team..."
+              terragrunt import kubernetes_deployment_v1.team "$namespace/$deploymentName"
+            }
           }
           if ($env:ACTION -in @("apply", "destroy")) {
             terragrunt $env:ACTION --terragrunt-non-interactive --auto-approve
