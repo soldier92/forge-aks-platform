@@ -120,6 +120,10 @@ resource "kubernetes_deployment_v1" "team" {
   spec {
     replicas = 1
 
+    strategy {
+      type = "Recreate"
+    }
+
     selector {
       match_labels = {
         app = var.app_name
