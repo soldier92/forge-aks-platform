@@ -161,7 +161,9 @@ resource "kubernetes_deployment_v1" "team" {
 
           security_context {
             allow_privilege_escalation = false
+            run_as_group               = 10001
             run_as_non_root            = true
+            run_as_user                = 10001
 
             capabilities {
               drop = ["ALL"]
