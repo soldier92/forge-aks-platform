@@ -1,7 +1,7 @@
 locals {
-  cleaned_team = regexreplace(lower(var.team_name), "[^a-z0-9-]", "-")
-  cleaned_env  = regexreplace(lower(var.environment), "[^a-z0-9-]", "-")
-  namespace    = "team-${trim(local.cleaned_team, "-")}-${trim(local.cleaned_env, "-")}"
+  cleaned_team = trim(replace(replace(replace(replace(lower(var.team_name), " ", "-"), "_", "-"), "/", "-"), "\\", "-"), "-")
+  cleaned_env  = trim(replace(replace(replace(replace(lower(var.environment), " ", "-"), "_", "-"), "/", "-"), "\\", "-"), "-")
+  namespace    = "team-${local.cleaned_team}-${local.cleaned_env}"
   app_labels = {
     app         = var.app_name
     team        = local.cleaned_team
